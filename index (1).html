@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>지역지리 탐험 카드</title>
+  <style>
+    /* 기본 레이아웃 */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Pretendard", "Malgun Gothic", sans-serif;
+      line-height: 1.6;
+      color: #1a1a1a;
+      background: #f5f6f8;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 3rem;
+    }
+
+    /* 제목 · 안내 */
+    .header {
+      margin-bottom: 2rem;
+    }
+
+    .header__title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .header__guide {
+      color: #555;
+      font-size: 0.95rem;
+    }
+
+    /* 공유 안내 */
+    .share-notice {
+      margin-top: 2.5rem;
+      padding: 1.25rem;
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #e8eaed;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .share-notice__title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .share-notice__text {
+      color: #555;
+      font-size: 0.9rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .share-notice__list {
+      color: #444;
+      font-size: 0.875rem;
+      padding-left: 1.25rem;
+    }
+
+    .share-notice__list li + li {
+      margin-top: 0.35rem;
+    }
+
+    /* 스크린 리더 전용 대체 텍스트 */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* 카드 그리드 — 모바일 1열, 태블릿 이상 2×2 */
+    .card-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    @media (min-width: 560px) {
+      .card-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .card-grid__item {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      cursor: pointer;
+      transition: box-shadow 0.2s, transform 0.2s;
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+
+    .card-grid__item:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .card-grid__item:focus-visible {
+      outline: 2px solid #3b6fd9;
+      outline-offset: 2px;
+    }
+
+    .card-grid__emoji {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-grid__name {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+
+    .card-grid__text {
+      color: #444;
+      font-size: 0.875rem;
+      line-height: 1.7;
+    }
+
+    .card-grid__text p + p {
+      margin-top: 0.35rem;
+    }
+
+    /* 상세 모달 — 오버레이 + 패널 */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal.is-open {
+      display: flex;
+    }
+
+    .modal__overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(2px);
+    }
+
+    .modal__panel {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 480px;
+      max-height: calc(100vh - 2rem);
+      overflow-y: auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 1.5rem 1.25rem 1.25rem;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+    }
+
+    .modal__header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      padding-right: 2rem;
+    }
+
+    .modal__emoji {
+      font-size: 2.25rem;
+      line-height: 1;
+    }
+
+    .modal__title {
+      font-size: 1.35rem;
+      font-weight: 700;
+    }
+
+    .modal__body {
+      color: #444;
+      font-size: 0.95rem;
+      line-height: 1.75;
+    }
+
+    .modal__body p + p {
+      margin-top: 0.5rem;
+    }
+
+    .modal__footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1.25rem;
+      padding-top: 1rem;
+      border-top: 1px solid #eee;
+      justify-content: flex-end;
+    }
+
+    .modal__btn {
+      padding: 0.55rem 1rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .modal__btn--next {
+      background: #3b6fd9;
+      color: #fff;
+    }
+
+    .modal__btn--next:hover {
+      background: #2f5ebf;
+    }
+
+    .modal__btn--close {
+      background: #f0f2f5;
+      color: #444;
+    }
+
+    .modal__btn--close:hover {
+      background: #e2e6ea;
+    }
+
+    .card-grid__item.is-active {
+      outline: 2px solid #3b6fd9;
+      outline-offset: 2px;
+    }
+
+    body.modal-open {
+      overflow: hidden;
+    }
+
+    .modal__close {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      width: 2rem;
+      height: 2rem;
+      border: none;
+      border-radius: 8px;
+      background: #f0f2f5;
+      color: #555;
+      font-size: 1.25rem;
+      line-height: 1;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .modal__close:hover {
+      background: #e2e6ea;
+    }
+
+    /* 모바일 모달 — 하단 시트 형태 */
+    @media (max-width: 559px) {
+      .modal {
+        align-items: flex-end;
+        padding: 0;
+      }
+
+      .modal__panel {
+        max-width: 100%;
+        max-height: 92dvh;
+        border-radius: 16px 16px 0 0;
+        padding: 1.25rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .modal__header {
+        padding-right: 2.5rem;
+      }
+
+      .modal__footer {
+        position: sticky;
+        bottom: 0;
+        background: #fff;
+        margin-top: 1rem;
+        padding-top: 0.75rem;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        justify-content: stretch;
+      }
+
+      .modal__btn {
+        flex: 1;
+        min-height: 44px;
+        font-size: 0.95rem;
+      }
+
+      .modal__close {
+        top: 0.65rem;
+        right: 0.65rem;
+        width: 2.5rem;
+        height: 2.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- 제목 · 안내 -->
+    <header class="header">
+      <h1 class="header__title">지역지리 탐험 카드</h1>
+      <p class="header__guide">
+        카드를 눌러 지역의 지리 정보를 자세히 살펴보세요.
+        모바일에서는 아래에서 올라오는 창으로 내용을 확인할 수 있습니다.
+      </p>
+    </header>
+
+    <!-- 카드 그리드 영역 -->
+    <main>
+      <section class="card-grid" id="cardGrid" aria-label="지역지리 카드 목록">
+        <!-- JS로 카드가 채워집니다 -->
+      </section>
+
+      <!-- 공유 안내 -->
+      <aside class="share-notice" aria-labelledby="shareTitle">
+        <h2 class="share-notice__title" id="shareTitle">공유 안내</h2>
+        <p class="share-notice__text">
+          이 페이지는 HTML 파일 하나로 만들어져 있어, 학생·동료에게 그대로 전달할 수 있습니다.
+        </p>
+        <ul class="share-notice__list">
+          <li>카카오톡·이메일로 <strong>index.html</strong> 파일을 보내 주세요.</li>
+          <li>학교 LMS·구글 클래스룸·패들릿 등에 파일을 올려 함께 볼 수 있습니다.</li>
+          <li>인터넷 없이도 브라우저(크롬·엣지·사파리)에서 바로 열립니다.</li>
+        </ul>
+      </aside>
+    </main>
+
+  </div>
+
+  <!-- 상세 모달 (숨김) -->
+  <div class="modal" id="detailModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalBody" hidden>
+    <div class="modal__overlay" id="modalOverlay" aria-hidden="true"></div>
+    <div class="modal__panel">
+      <button class="modal__close" type="button" id="modalClose" aria-label="상세 창 닫기">×</button>
+      <div class="modal__header">
+        <span class="modal__emoji" id="modalEmoji" aria-hidden="true"></span>
+        <span class="sr-only" id="modalEmojiAlt"></span>
+        <h2 class="modal__title" id="modalTitle"></h2>
+      </div>
+      <div class="modal__body" id="modalBody"></div>
+      <div class="modal__footer">
+        <button class="modal__btn modal__btn--next" type="button" id="modalNext">다음 지역 →</button>
+        <button class="modal__btn modal__btn--close" type="button" id="modalCloseBtn">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 탐험 카드 데이터
+    const cardsData = [
+      {
+        id: "thailand",
+        name: "태국",
+        emoji: "🇹🇭",
+        altText: "태국 국기",
+        lines: [
+          "기후: 열대 몬순 기후로 연중 덥고 습하며, 우기(5~10월)와 건기가 나뉜다.",
+          "산업: 쌀·고무·수산물 등 1차 산업과 관광, 전자 부품 수출이 발달했다.",
+          "문화: 불교 문화가 깊고, 왓(사원), 타이 요리, 송크란(물 축제)가 유명하다."
+        ]
+      },
+      {
+        id: "france",
+        name: "프랑스",
+        emoji: "🇫🇷",
+        altText: "프랑스 국기",
+        lines: [
+          "기후: 서부는 대서양 영향으로 온화하고, 동부·남부는 사계절 차이가 뚜렷하다.",
+          "산업: 항공·자동차·패션·포도주·치즈·관광 등이 세계적으로 유명하다.",
+          "문화: 루브르 박물관·파리 철탑 등 예술·건축 유산이 풍부하고, 와인·요리 문화가 발달했다."
+        ]
+      },
+      {
+        id: "egypt",
+        name: "이집트",
+        emoji: "🇪🇬",
+        altText: "이집트 국기",
+        lines: [
+          "기후: 사막 기후로 강수량이 적고 여름은 매우 덥다. 나일강 유역만 비옥한 땅이다.",
+          "산업: 면화·쌀·석유·천연가스·수에즈 운하를 통한 무역이 중요하다.",
+          "문화: 피라미드·스핑크스 등 고대 문명 유산이 세계적이며, 이슬람·코프트 문화가 공존한다."
+        ]
+      },
+      {
+        id: "brazil",
+        name: "브라질",
+        emoji: "🇧🇷",
+        altText: "브라질 국기",
+        lines: [
+          "기후: 적도에 가까워 대부분 열대·아열대 기후이며, 아마존에 세계 최대 열대우림이 있다.",
+          "산업: 커피·콩·철광석·석유 등 자원 수출과 자동차·항공 산업이 발달했다.",
+          "문화: 카니발·삼바·축구 문화가 유명하고, 포르투갈어를 사용하는 다민족 사회이다."
+        ]
+      }
+    ];
+
+    // 모달 · 카드 동작
+    const cardGrid = document.getElementById("cardGrid");
+    const detailModal = document.getElementById("detailModal");
+    const modalOverlay = document.getElementById("modalOverlay");
+    const modalClose = document.getElementById("modalClose");
+    const modalCloseBtn = document.getElementById("modalCloseBtn");
+    const modalNext = document.getElementById("modalNext");
+    const modalEmoji = document.getElementById("modalEmoji");
+    const modalEmojiAlt = document.getElementById("modalEmojiAlt");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalBody = document.getElementById("modalBody");
+
+    let currentIndex = -1;
+    const cardElements = [];
+
+    function renderModalContent(card) {
+      modalEmoji.textContent = card.emoji;
+      modalEmojiAlt.textContent = card.altText;
+      modalTitle.textContent = card.name;
+      modalBody.innerHTML = card.lines.map(function (line) {
+        return "<p>" + line + "</p>";
+      }).join("");
+    }
+
+    function updateNextButton() {
+      const nextIndex = (currentIndex + 1) % cardsData.length;
+      const nextCard = cardsData[nextIndex];
+      modalNext.textContent = "다음: " + nextCard.name;
+      modalNext.setAttribute("aria-label", "다음 지역 " + nextCard.name + " (" + nextCard.altText + ") 보기");
+    }
+
+    function setActiveCard(index) {
+      cardElements.forEach(function (el, i) {
+        el.classList.toggle("is-active", i === index);
+      });
+    }
+
+    function openModalByIndex(index) {
+      currentIndex = index;
+      const card = cardsData[index];
+
+      renderModalContent(card);
+      updateNextButton();
+      setActiveCard(index);
+
+      detailModal.hidden = false;
+      detailModal.classList.add("is-open");
+      document.body.classList.add("modal-open");
+      modalClose.focus();
+    }
+
+    function closeModal() {
+      const lastIndex = currentIndex;
+
+      detailModal.classList.remove("is-open");
+      detailModal.hidden = true;
+      document.body.classList.remove("modal-open");
+      setActiveCard(-1);
+      currentIndex = -1;
+
+      if (lastIndex >= 0 && cardElements[lastIndex]) {
+        cardElements[lastIndex].focus();
+      }
+    }
+
+    function showNextRegion() {
+      const nextIndex = (currentIndex + 1) % cardsData.length;
+      openModalByIndex(nextIndex);
+    }
+
+    cardsData.forEach(function (card, index) {
+      const article = document.createElement("article");
+      article.className = "card-grid__item";
+      article.dataset.id = card.id;
+      article.tabIndex = 0;
+      article.setAttribute("role", "button");
+      article.setAttribute("aria-label", card.altText + ", " + card.name + " 상세 보기");
+
+      article.innerHTML =
+        '<div class="card-grid__emoji" aria-hidden="true">' + card.emoji + "</div>" +
+        '<span class="sr-only">' + card.altText + "</span>" +
+        '<h2 class="card-grid__name">' + card.name + "</h2>" +
+        '<div class="card-grid__text">' +
+          card.lines.map(function (line) {
+            return "<p>" + line + "</p>";
+          }).join("") +
+        "</div>";
+
+      article.addEventListener("click", function () {
+        openModalByIndex(index);
+      });
+
+      article.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openModalByIndex(index);
+        }
+      });
+
+      cardElements.push(article);
+      cardGrid.appendChild(article);
+    });
+
+    modalOverlay.addEventListener("click", closeModal);
+    modalClose.addEventListener("click", closeModal);
+    modalCloseBtn.addEventListener("click", closeModal);
+    modalNext.addEventListener("click", showNextRegion);
+
+    document.addEventListener("keydown", function (event) {
+      if (!detailModal.classList.contains("is-open")) {
+        return;
+      }
+
+      if (event.key === "Escape") {
+        closeModal();
+      }
+
+      if (event.key === "ArrowRight") {
+        showNextRegion();
+      }
+    });
+  </script>
+
+</body>
+</html>
